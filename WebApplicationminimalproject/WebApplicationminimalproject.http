@@ -1,0 +1,10 @@
+@WebApplicationminimalproject_HostAddress = https://localhost:7209
+
+GET {{WebApplicationminimalproject_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{WebApplicationminimalproject_HostAddress}}/SayHello?name=schott
+
+###
