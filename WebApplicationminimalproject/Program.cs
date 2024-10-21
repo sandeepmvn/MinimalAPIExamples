@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using WebApplicationminimalproject.API;
+using WebApplicationminimalproject.Dtos;
 using WebApplicationminimalproject.Filter;
 using WebApplicationminimalproject.Model;
 
@@ -16,7 +17,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<TodoDBContext>(options =>
 {
-    options.UseInMemoryDatabase("TODOLIST");
+    ///options.UseInMemoryDatabase("TODOLIST");
+    options.UseSqlServer("Server=localhost;Database=TODO;Trusted_Connection=True;;Integrated Security=True ;TrustServerCertificate=True");
 });
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var app = builder.Build();
@@ -56,14 +58,14 @@ todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200);
 
 
 
-todoitem.MapPost("/", async (Todo model, [FromServices] TodoDBContext dBContext, HttpRequest request) =>
+todoitem.MapPost("/", async (ToDoDto model, [FromServices] TodoDBContext dBContext, HttpRequest request) =>
 {
     //var id = request.RouteValues["id"];
     //var page = request.Query["page"];
     var customHeader = request.Headers["Content-Type"];
 
     //4
-    await dBContext.Todos.AddAsync(model);
+    await dBContext.Todos.AddAsync(model.ConvertTODO());
     await dBContext.SaveChangesAsync();
 
     return model;
@@ -71,7 +73,7 @@ todoitem.MapPost("/", async (Todo model, [FromServices] TodoDBContext dBContext,
 {
     //3
     //Retervie the argument
-    var todo = context.GetArgument<Todo>(0);
+    var todo = context.GetArgument<ToDoDto>(0);
 
     if (string.IsNullOrEmpty(todo?.Name) || string.IsNullOrWhiteSpace(todo?.Name) || todo is null)
         return Results.Problem("Name is Required");
@@ -172,14 +174,6 @@ api.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast").WithTags("WeatherForecast")
 .WithOpenApi();
-
-
-app.UseEndpoints(edpoint =>
-{
-    edpoint.MapDefaultControllerRoute();
-});
-
-
 
 
 app.Run();
