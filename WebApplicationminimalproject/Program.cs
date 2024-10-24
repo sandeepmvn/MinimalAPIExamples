@@ -2,10 +2,13 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Todo.EFCore;
+using Todo.Models;
+using Todo.Models.Dtos;
+using Todo.Repository;
 using WebApplicationminimalproject.API;
-using WebApplicationminimalproject.Dtos;
 using WebApplicationminimalproject.Filter;
-using WebApplicationminimalproject.Model;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,21 +17,25 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-var configuration=builder.Configuration;
-builder.Services.AddDbContext<TodoDBContext>(options =>
+var configuration = builder.Configuration;
+builder.Services.AddDbContext<ToDoDBContext>(options =>
 {
     ///options.UseInMemoryDatabase("TODOLIST");
     options.UseSqlServer(configuration.GetConnectionString("TodoDB"));
 });
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+
+builder.Services.AddTransient<ITodoRepo, TodoRepo>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-    ///Middle wares
-    app.UseSwagger();
-    app.UseSwaggerUI();
+///Middle wares
+app.UseSwagger();
+app.UseSwaggerUI();
 //}
 
 app.UseHttpsRedirection();
@@ -58,22 +65,22 @@ todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200);
 
 
 
-todoitem.MapPost("/", async (ToDoDto model, [FromServices] TodoDBContext dBContext, HttpRequest request) =>
+todoitem.MapPost("/", async (TodoRequestDto model, [FromServices] ITodoRepo todoRepo, HttpRequest request) =>
 {
     //var id = request.RouteValues["id"];
     //var page = request.Query["page"];
     var customHeader = request.Headers["Content-Type"];
 
     //4
-    await dBContext.Todos.AddAsync(model.ConvertTODO());
-    await dBContext.SaveChangesAsync();
-
+    //await dBContext.Todos.AddAsync(model.ConvertTODO());
+    //await dBContext.SaveChangesAsync();
+    await todoRepo.Add(model.ConvertTODO());
     return model;
 }).AddEndpointFilter(async (context, next) =>
 {
     //3
     //Retervie the argument
-    var todo = context.GetArgument<ToDoDto>(0);
+    var todo = context.GetArgument<TodoRequestDto>(0);
 
     if (string.IsNullOrEmpty(todo?.Name) || string.IsNullOrWhiteSpace(todo?.Name) || todo is null)
         return Results.Problem("Name is Required");
@@ -84,43 +91,43 @@ todoitem.MapPost("/", async (ToDoDto model, [FromServices] TodoDBContext dBConte
     return result;
 });
 
-todoitem.MapPut("/{id}", async (int id, Todo inputTodo, TodoDBContext db) =>
+todoitem.MapPut("/{id}", async (int id, TodoRequestDto inputTodo,[FromServices] ITodoRepo todoRepo) =>
 {
-    var todo = await db.Todos.FindAsync(id);
-    if (todo is null) return Results.NotFound();
-    todo.Name = inputTodo.Name;
-    todo.IsComplete = inputTodo.IsComplete;
 
-    await db.SaveChangesAsync();
+    var todo = await todoRepo.FindAsNoTracking(id);
+    if (todo is null) return Results.NotFound();
+
+    await todoRepo.Update(inputTodo.ConvertTODO());
 
     return Results.NoContent();
 });
 
 
-todoitem.MapDelete("/{id}", async (int id, TodoDBContext db) =>
+todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
 {
-    if (await db.Todos.FindAsync(id) is Todo todo)
-    {
-        db.Todos.Remove(todo);
-        await db.SaveChangesAsync();
-        return Results.NoContent();
-    }
 
-    return Results.NotFound();
+    var todo = await todoRepo.FindAsNoTracking(id);
+    if (todo is null) return Results.NotFound();
+
+    await todoRepo.Delete(id);
+
+    return Results.NoContent();
+    
 });
 
 
 
 todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems");
 
-async Task<List<Todo>> GetCompletedItems(HttpContext context, TodoDBContext db)
+async Task<IEnumerable<TodoEntity>> GetCompletedItems(HttpContext context, [FromServices] ITodoRepo todoRepo)
 {
-    return await db.Todos.Where(x => x.IsComplete).ToListAsync();
+   return await todoRepo.GetAllBy(x => x.IsComplete);
+    //return await db.Todos.Where(x => x.IsComplete).ToListAsync();
 }
 
 
-todoitem.MapGet("/{id}", async (int id, TodoDBContext db) =>
-await db.Todos.FindAsync(id) is Todo todo ? Results.Ok(todo) :
+todoitem.MapGet("/{id}", async (int id, ToDoDBContext db) =>
+await db.Todos.FindAsync(id) is TodoEntity todo ? Results.Ok(todo) :
 Results.NotFound());
 
 

@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace WebApplicationminimalproject.Migrations
+namespace Todo.EFCore.Migrations
 {
     /// <inheritdoc />
     public partial class InitialMigration : Migration
@@ -17,7 +17,9 @@ namespace WebApplicationminimalproject.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: false),
-                    IsComplete = table.Column<bool>(type: "bit", nullable: false)
+                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
