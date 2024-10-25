@@ -17,6 +17,8 @@ namespace WebApplicationminimalproject.API
         {
             var res=await todoRepo.GetAll();
 
+            var claims= context.User.Claims;
+
             return TypedResults.Ok(res.Select(x=>new TodoResponseDto(x.Id,x.Name,x.IsComplete,x.IsActive)).ToList());
         }
     }

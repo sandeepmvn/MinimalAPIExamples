@@ -78,13 +78,13 @@ builder.Services.AddAuthentication(x =>
         ValidateLifetime = true,
     };
 });
-//builder.Services.AddAuthorization();
+builder.Services.AddAuthorization();
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("admin"));
-    options.AddPolicy("UserPolicy", policy => policy.RequireRole("user"));
-});
+//builder.Services.AddAuthorization(options =>
+//{
+//    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("admin"));
+//    options.AddPolicy("ALLPolicy", policy => policy.RequireRole("admin,user"));
+//});
 
 var app = builder.Build();
 
@@ -126,7 +126,7 @@ var todoitem = api.MapGroup("/todoItems").WithTags("todoItems").WithOpenApi();
 
 //[Authorize(Role="Admin")]
 
-todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200).RequireAuthorization("AdminPolicy,UserPolicy");
+todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200).RequireAuthorization();
 
 
 
@@ -182,7 +182,7 @@ todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
 
 
 
-todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems").RequireAuthorization("AdminPolicy,UserPolicy");
+todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems").RequireAuthorization("ALLPolicy");
 
 async Task<IEnumerable<TodoEntity>> GetCompletedItems(HttpContext context, [FromServices] ITodoRepo todoRepo)
 {

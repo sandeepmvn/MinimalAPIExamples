@@ -45,6 +45,7 @@ namespace WebApplicationminimalproject.API
             var claims = new ClaimsIdentity();
             claims.AddClaim(new Claim(ClaimTypes.Name, model.UserName));
             claims.AddClaim(new Claim(ClaimTypes.Role, model.Role));
+            claims.AddClaim(new Claim("IDData", "Data"));
             //foreach (var role in user.Roles)
             //    claims.AddClaim(new Claim(ClaimTypes.Role, role));
 
