@@ -1,11 +1,16 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
+using System.Text;
 using Todo.EFCore;
 using Todo.Models;
 using Todo.Models.Dtos;
 using Todo.Repository;
+using WebApplicationminimalproject;
 using WebApplicationminimalproject.API;
 using WebApplicationminimalproject.Filter;
 
@@ -16,7 +21,35 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c => {
+
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "JWT Authentication",
+        Description = "Enter your JWT token in this field",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+
+});
 var configuration = builder.Configuration;
 builder.Services.AddDbContext<ToDoDBContext>(options =>
 {
@@ -27,6 +60,31 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 
 builder.Services.AddTransient<ITodoRepo, TodoRepo>();
+
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(x => {
+
+    x.RequireHttpsMetadata = false;
+    x.SaveToken = true;
+    x.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        IssuerSigningKey= new SymmetricSecurityKey(Encoding.ASCII.GetBytes(CustomUtility.PRIVATEKEY)),
+        ValidateIssuer=false,
+        ValidateIssuerSigningKey = true,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+    };
+});
+//builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("admin"));
+    options.AddPolicy("UserPolicy", policy => policy.RequireRole("user"));
+});
 
 var app = builder.Build();
 
@@ -40,6 +98,8 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 
 //Grouping 
 var api = app.MapGroup("/api")
@@ -57,11 +117,16 @@ var api = app.MapGroup("/api")
 
     }).AddEndpointFilter<LogEndPointFilter>();
 
+//[Authorize(S)]
+
+
+api.MapPost("/Authenticate", Authenticate.GenerateToken);
+
 var todoitem = api.MapGroup("/todoItems").WithTags("todoItems").WithOpenApi();
 
+//[Authorize(Role="Admin")]
 
-
-todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200);
+todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200).RequireAuthorization("AdminPolicy,UserPolicy");
 
 
 
@@ -89,7 +154,7 @@ todoitem.MapPost("/", async (TodoRequestDto model, [FromServices] ITodoRepo todo
     var result = await next(context);
     //5
     return result;
-});
+}).RequireAuthorization("AdminPolicy");
 
 todoitem.MapPut("/{id}", async (int id, TodoRequestDto inputTodo,[FromServices] ITodoRepo todoRepo) =>
 {
@@ -100,7 +165,7 @@ todoitem.MapPut("/{id}", async (int id, TodoRequestDto inputTodo,[FromServices] 
     await todoRepo.Update(inputTodo.ConvertTODO());
 
     return Results.NoContent();
-});
+}).RequireAuthorization("AdminPolicy"); ;
 
 
 todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
@@ -113,11 +178,11 @@ todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
 
     return Results.NoContent();
     
-});
+}).RequireAuthorization("AdminPolicy"); ;
 
 
 
-todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems");
+todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems").RequireAuthorization("AdminPolicy,UserPolicy");
 
 async Task<IEnumerable<TodoEntity>> GetCompletedItems(HttpContext context, [FromServices] ITodoRepo todoRepo)
 {
