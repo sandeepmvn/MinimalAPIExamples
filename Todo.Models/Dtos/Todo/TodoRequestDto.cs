@@ -11,13 +11,13 @@ namespace Todo.Models.Dtos
     {
         [Required]
         [StringLength(TodoEntity.NameLength)]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public bool IsComplete { get; set; }
 
         // use mapper instead of this 
         public TodoEntity ConvertTODO()
         {
-            return new TodoEntity { Name = Name, IsComplete = IsComplete,IsActive=true,IsDelete=false };
+            return new TodoEntity { Name = Name, IsComplete = IsComplete, IsActive = true, IsDelete = false };
         }
     }
     

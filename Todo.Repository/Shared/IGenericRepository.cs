@@ -12,9 +12,9 @@ namespace Todo.Repository.Shared
     {
         Task<IEnumerable<Entity>> GetAll();
         Task<IEnumerable<Entity>> GetAllBy(Expression<Func<Entity, bool>> predicate);
-        Task<Entity> Find<TParmeter>(TParmeter id);
-        Task<Entity> FindAsNoTracking<TParameter>(TParameter id);
-        Task<Entity> GetBy(Expression<Func<Entity, bool>> predicate);
+        Task<Entity?> Find<TParmeter>(TParmeter id);
+        Task<Entity?> FindAsNoTracking<TParameter>(TParameter id);
+        Task<Entity?> GetBy(Expression<Func<Entity, bool>> predicate);
         Task<PaginationEntityDto<Entity>> GetPaged(int pagenumber, int pagesize);
         Task<PaginationEntityDto<Entity>> GetPaged(int pagenumber, int pagesize, Expression<Func<Entity, bool>> predicate, Expression<Func<Entity, object>> orderbypredicate, bool orderbyascending = true);
         Task<Entity> Add(Entity entity);

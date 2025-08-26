@@ -78,23 +78,20 @@ builder.Services.AddAuthentication(x =>
         ValidateLifetime = true,
     };
 });
-builder.Services.AddAuthorization();
-
-//builder.Services.AddAuthorization(options =>
-//{
-//    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("admin"));
-//    options.AddPolicy("ALLPolicy", policy => policy.RequireRole("admin,user"));
-//});
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("admin"));
+    options.AddPolicy("ALLPolicy", policy => policy.RequireRole("admin", "user"));
+});
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-///Middle wares
-app.UseSwagger();
-app.UseSwaggerUI();
-//}
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 
@@ -105,26 +102,16 @@ app.UseAuthorization();
 var api = app.MapGroup("/api")
     .AddEndpointFilter(async (context, next) =>
     {
-        //1
         app.Logger.LogInformation("Before first filter");
-        //before ---invocation my method ---API
-        //2
         var result = await next(context);
-        //6
-        //After server the api
         app.Logger.LogInformation("After first filter");
         return result;
 
     }).AddEndpointFilter<LogEndPointFilter>();
 
-//[Authorize(S)]
-
-
 api.MapPost("/Authenticate", Authenticate.GenerateToken);
 
 var todoitem = api.MapGroup("/todoItems").WithTags("todoItems").WithOpenApi();
-
-//[Authorize(Role="Admin")]
 
 todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200).RequireAuthorization();
 
@@ -132,19 +119,13 @@ todoitem.MapGet("/", TodoAPI.GetAllTodoItems).Produces(200).RequireAuthorization
 
 todoitem.MapPost("/", async (TodoRequestDto model, [FromServices] ITodoRepo todoRepo, HttpRequest request) =>
 {
-    //var id = request.RouteValues["id"];
-    //var page = request.Query["page"];
     var customHeader = request.Headers["Content-Type"];
 
-    //4
-    //await dBContext.Todos.AddAsync(model.ConvertTODO());
-    //await dBContext.SaveChangesAsync();
     await todoRepo.Add(model.ConvertTODO());
     return model;
 }).AddEndpointFilter(async (context, next) =>
 {
-    //3
-    //Retervie the argument
+    //Retrieve the argument
     var todo = context.GetArgument<TodoRequestDto>(0);
 
     if (string.IsNullOrEmpty(todo?.Name) || string.IsNullOrWhiteSpace(todo?.Name) || todo is null)
@@ -152,7 +133,6 @@ todoitem.MapPost("/", async (TodoRequestDto model, [FromServices] ITodoRepo todo
     if (todo.Name.Length > 5)
         return Results.Problem("Name should be less than 5 characters");
     var result = await next(context);
-    //5
     return result;
 }).RequireAuthorization("AdminPolicy");
 
@@ -165,7 +145,7 @@ todoitem.MapPut("/{id}", async (int id, TodoRequestDto inputTodo,[FromServices] 
     await todoRepo.Update(inputTodo.ConvertTODO());
 
     return Results.NoContent();
-}).RequireAuthorization("AdminPolicy"); ;
+}).RequireAuthorization("AdminPolicy");
 
 
 todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
@@ -178,7 +158,7 @@ todoitem.MapDelete("/{id}", async (int id, [FromServices] ITodoRepo todoRepo) =>
 
     return Results.NoContent();
     
-}).RequireAuthorization("AdminPolicy"); ;
+}).RequireAuthorization("AdminPolicy");
 
 
 
@@ -186,8 +166,7 @@ todoitem.MapGet("/completed", GetCompletedItems).WithTags("todoItems").RequireAu
 
 async Task<IEnumerable<TodoEntity>> GetCompletedItems(HttpContext context, [FromServices] ITodoRepo todoRepo)
 {
-   return await todoRepo.GetAllBy(x => x.IsComplete);
-    //return await db.Todos.Where(x => x.IsComplete).ToListAsync();
+    return await todoRepo.GetAllBy(x => x.IsComplete);
 }
 
 
@@ -198,22 +177,13 @@ Results.NotFound());
 
 app.MapPost("/Test", ([AsParameters] ParamTest model) =>
 {
-
-
-
+    return Results.Ok($"Test endpoint called with Id: {model.Id}, Name: {model.Name}");
 }).WithTags("general");
 
 app.MapGet("/SayHello", ([AsParameters] ParamTest model) =>
 {
-
     return $"Hello {model.Name}";
 }).WithTags("general");
-
-//// GET  /tags?q=1&q=2&q=3 
-//app.MapGet("/tags", (int[] q) =>
-//{
-//    return $"tag1: {q[0]} , tag2: {q[1]}, tag3: {q[2]}";
-//    }).WithTags("general");
 
 app.MapGet("/tags", (Tag[] q) =>
 {
@@ -260,7 +230,7 @@ internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary
 class ParamTest
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 
@@ -274,9 +244,7 @@ public class Tag
             tag = default!;
             return false;
         }
-        tag = JsonConvert.DeserializeObject<Tag>(name);
-
-        //tag = new Tag { Name = name };
+        tag = JsonConvert.DeserializeObject<Tag>(name) ?? new Tag();
         return true;
     }
 }

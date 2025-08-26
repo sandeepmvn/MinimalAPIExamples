@@ -8,17 +8,16 @@ namespace WebApplicationminimalproject.Filter
         {
             _Logger = Logger;
         }
-        //Task<object?>
         public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
-            //before
+            // Log arguments before execution
             foreach (var item in context.Arguments)
             {
-                _Logger.LogInformation(item.ToString());
+                _Logger.LogInformation(item?.ToString() ?? "null");
             }
             _Logger.LogInformation("Before");
             var result = await next(context);
-            //after
+            // Log after execution
             _Logger.LogInformation("After");
             return result;
         }

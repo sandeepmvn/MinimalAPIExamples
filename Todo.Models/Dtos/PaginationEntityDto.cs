@@ -17,7 +17,7 @@ namespace Todo.Models.Dtos
             PageIndex = pageIndex;
             PageSize = pageSize;
         }
-        public List<TEntity> Entities { get; set; }
+        public List<TEntity> Entities { get; set; } = new List<TEntity>();
         public int PageIndex { get; set; }
         public int Count { get; set; }
         public int PageSize { get; set; }

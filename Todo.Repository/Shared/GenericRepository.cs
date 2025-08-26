@@ -29,8 +29,7 @@ namespace Todo.Repository.Shared
         {
             try
             {
-                IEnumerable<Entity> entities = null;
-                entities = await dbset.AsNoTracking().ToListAsync();
+                var entities = await dbset.AsNoTracking().ToListAsync();
                 return entities;
             }
             catch (Exception ex)
@@ -40,15 +39,18 @@ namespace Todo.Repository.Shared
             }
         }
 
-        public virtual async Task<Entity> Find<TParmeter>(TParmeter id)
+        public virtual async Task<Entity?> Find<TParmeter>(TParmeter id)
         {
             return await dbset.FindAsync(id);
         }
 
-        public virtual async Task<Entity> FindAsNoTracking<TParmeter>(TParmeter id)
+        public virtual async Task<Entity?> FindAsNoTracking<TParmeter>(TParmeter id)
         {
             var entity = await dbset.FindAsync(id);
-            dbcontext.Entry(entity).State = EntityState.Detached;
+            if (entity != null)
+            {
+                dbcontext.Entry(entity).State = EntityState.Detached;
+            }
             return entity;
         }
 
@@ -122,7 +124,7 @@ namespace Todo.Repository.Shared
             }
         }
 
-        public virtual async Task<Entity> GetBy(Expression<Func<Entity, bool>> predicate)
+        public virtual async Task<Entity?> GetBy(Expression<Func<Entity, bool>> predicate)
         {
             try
             {

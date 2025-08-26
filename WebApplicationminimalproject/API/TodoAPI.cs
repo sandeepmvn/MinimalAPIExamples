@@ -19,7 +19,7 @@ namespace WebApplicationminimalproject.API
 
             var claims= context.User.Claims;
 
-            return TypedResults.Ok(res.Select(x=>new TodoResponseDto(x.Id,x.Name,x.IsComplete,x.IsActive)).ToList());
+            return TypedResults.Ok(res.Select(x=>new TodoResponseDto(x.Id,x.Name ?? string.Empty,x.IsComplete,x.IsActive)).ToList());
         }
     }
 }
